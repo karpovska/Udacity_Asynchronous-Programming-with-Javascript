@@ -115,13 +115,19 @@ function runRace(raceID) {
 	// TODO - use Javascript's built in setInterval method to get race info every 500ms
 		let raceInterval = setInterval(raceStatus, 500);
 		async function raceStatus() {	
-			await getRace(raceID).then(race => {
-				console.log('@@@@@', race)
+			await getRace(raceID).then(race => {				
 			/* 
 				TODO - if the race info status property is "in-progress", update the leaderboard by calling:
 
 				renderAt('#leaderBoard', raceProgress(res.positions))
 				
+			*/
+			/* 
+				TODO - if the race info status property is "finished", run the following:
+
+				clearInterval(raceInterval) // to stop the interval from repeating
+				renderAt('#race', resultsView(res.positions)) // to render the results view
+				reslove(res) // resolve the promise
 			*/
 				if(race.status === 'in-progress'){
 					renderAt('#leaderBoard', raceProgress(race.positions));
@@ -130,13 +136,7 @@ function runRace(raceID) {
 					renderAt('#race', resultsView(race.positions));
 					resolve(race);
 				}
-			/* 
-				TODO - if the race info status property is "finished", run the following:
-
-				clearInterval(raceInterval) // to stop the interval from repeating
-				renderAt('#race', resultsView(res.positions)) // to render the results view
-				reslove(res) // resolve the promise
-			*/
+			
 			})	
 		
 		}
@@ -215,6 +215,7 @@ function handleSelectTrack(target) {
 function handleAccelerate() {
 	console.log("accelerate button clicked")
 	// TODO - Invoke the API call to accelerate
+	accelerate(store.race_id - 1);
 }
 
 // HTML VIEWS ------------------------------------------------
@@ -425,4 +426,9 @@ function accelerate(id) {
 	// POST request to `${SERVER}/api/races/${id}/accelerate`
 	// options parameter provided as defaultFetchOpts
 	// no body or datatype needed for this request
+	return fetch(`${SERVER}/api/races/${id}/accelerate`, {
+		method: 'POST',
+		...defaultFetchOpts(),
+	})
+	.catch(error => console.log("Problem with accelerate request:", error))
 }
