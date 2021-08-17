@@ -105,28 +105,45 @@ async function handleCreateRace() {
 	// TODO - call the async function runCountdown
 	await runCountdown();
 	// TODO - call the async function startRace
-	await startRace(store.race_id);
+	await startRace(store.race_id - 1);
 	// TODO - call the async function runRace
-	await runRace(store.race_id);
+	await runRace(store.race_id - 1);
 }
 
 function runRace(raceID) {
 	return new Promise(resolve => {
 	// TODO - use Javascript's built in setInterval method to get race info every 500ms
+		let raceInterval = setInterval(raceStatus, 500);
+		async function raceStatus() {	
+			await getRace(raceID).then(race => {
+				console.log('@@@@@', race)
+			/* 
+				TODO - if the race info status property is "in-progress", update the leaderboard by calling:
 
-	/* 
-		TODO - if the race info status property is "in-progress", update the leaderboard by calling:
+				renderAt('#leaderBoard', raceProgress(res.positions))
+				
+			*/
+				if(race.status === 'in-progress'){
+					renderAt('#leaderBoard', raceProgress(race.positions));
+				} else if (race.status === 'finished') {
+					clearInterval(raceInterval);
+					renderAt('#race', resultsView(race.positions));
+					resolve(race);
+				}
+			/* 
+				TODO - if the race info status property is "finished", run the following:
 
-		renderAt('#leaderBoard', raceProgress(res.positions))
-	*/
+				clearInterval(raceInterval) // to stop the interval from repeating
+				renderAt('#race', resultsView(res.positions)) // to render the results view
+				reslove(res) // resolve the promise
+			*/
+			})	
+		
+		}
+	
 
-	/* 
-		TODO - if the race info status property is "finished", run the following:
-
-		clearInterval(raceInterval) // to stop the interval from repeating
-		renderAt('#race', resultsView(res.positions)) // to render the results view
-		reslove(res) // resolve the promise
-	*/
+	}).catch((error) => {
+		console.log('An error occur while running the race: ', error);
 	})
 	// remember to add error handling for the Promise
 }
@@ -145,6 +162,8 @@ async function runCountdown() {
 				// TODO - if the countdown is done, clear the interval, resolve the promise, and return
 				if(timer === 0){
 					clearInterval(reset);
+					resolve();
+					return;
 				} else {
 					// run this DOM manipulation to decrement the countdown for the user
 					document.getElementById('big-numbers').innerHTML = --timer
@@ -298,7 +317,7 @@ function resultsView(positions) {
 }
 
 function raceProgress(positions) {
-	let userPlayer = positions.find(e => e.id === store.player_id)
+	let userPlayer = positions.find(e => e.driver_name === store.player_id)
 	userPlayer.driver_name += " (you)"
 
 	positions = positions.sort((a, b) => (a.segment > b.segment) ? -1 : 1)
