@@ -1,10 +1,13 @@
 // PROVIDED CODE BELOW (LINES 1 - 80) DO NOT REMOVE
 
+//const { response } = require("express")
+
 // The store will hold all information needed globally
 var store = {
 	track_id: undefined,
 	player_id: undefined,
 	race_id: undefined,
+	json: {}
 }
 
 // We need our javascript to wait until the DOM is loaded
@@ -35,6 +38,7 @@ async function onPageLoad() {
 function setupClickHandlers() {
 	document.addEventListener('click', function(event) {
 		const { target } = event
+		console.log(target);
 
 		// Race track form field
 		if (target.matches('.card.track')) {
@@ -75,14 +79,28 @@ async function delay(ms) {
 // This async function controls the flow of the race, add the logic and error handling
 async function handleCreateRace() {
 	// render starting UI
-	renderAt('#race', renderRaceStartView())
+	let selectedTrack = store.json.tracks.filter(track => track.id == store.track_id)[0];	
+	
+	renderAt('#race', renderRaceStartView(selectedTrack))
 
 	// TODO - Get player_id and track_id from the store
+	let playerId = store.player_id;
+	let trackId = store.track_id;
+	console.log(store);
+	console.log(`Player id is: ${playerId}`);
+	console.log(`Track id is: ${trackId}`);
 	
 	// const race = TODO - invoke the API call to create the race, then save the result
+	const race = createRace(playerId, trackId)
+	.then(results => {		
+		// TODO - update the store with the race id
+		store.race_id = results.ID;
 
-	// TODO - update the store with the race id
-
+		return results;
+	})
+	.catch(error => console.log('Problem with creating race at handleCreateRace:', error));
+	
+	
 	// The race has been created, now start the countdown
 	// TODO - call the async function runCountdown
 
@@ -145,6 +163,10 @@ function handleSelectPodRacer(target) {
 	target.classList.add('selected')
 
 	// TODO - save the selected racer to the store
+	store.race_id = target.id;	
+	let selectedRacer = store.json.racers.filter(racer => racer.id == target.id)[0];
+	store.player_id = selectedRacer.driver_name;	
+
 }
 
 function handleSelectTrack(target) {
@@ -160,6 +182,7 @@ function handleSelectTrack(target) {
 	target.classList.add('selected')
 
 	// TODO - save the selected track id to the store
+	store.track_id = target.id;
 	
 }
 
@@ -182,7 +205,7 @@ function renderRacerCars(racers) {
 
 	return `
 		<ul id="racers">
-			${reuslts}
+			${results}
 		</ul>
 	`
 }
@@ -193,9 +216,9 @@ function renderRacerCard(racer) {
 	return `
 		<li class="card podracer" id="${id}">
 			<h3>${driver_name}</h3>
-			<p>${top_speed}</p>
-			<p>${acceleration}</p>
-			<p>${handling}</p>
+			<p>Top speed: ${top_speed}</p>
+			<p>Acceleration: ${acceleration}</p>
+			<p>Handling: ${handling}</p>
 		</li>
 	`
 }
@@ -233,7 +256,7 @@ function renderCountdown(count) {
 	`
 }
 
-function renderRaceStartView(track, racers) {
+function renderRaceStartView(track, racers) {	
 	return `
 		<header>
 			<h1>Race: ${track.name}</h1>
@@ -321,10 +344,24 @@ function defaultFetchOpts() {
 
 function getTracks() {
 	// GET request to `${SERVER}/api/tracks`
+	return fetch(`${SERVER}/api/tracks`)
+	.then(tracks => tracks.json())
+	.then(json => store.json.tracks = json)
+	
+	//.then(json => console.log(json))
+	.catch(error => console.log('Problem with getTracks request', error))
 }
 
 function getRacers() {
 	// GET request to `${SERVER}/api/cars`
+	return fetch(`${SERVER}/api/cars`)
+	.then(cars => cars.json())
+	.then(json => {
+		store.json.racers = json;
+		return json;
+	})
+	//.then(json => console.log(json))
+	.catch(error => console.log('Problem with getRacers request:', error))
 }
 
 function createRace(player_id, track_id) {
@@ -344,6 +381,9 @@ function createRace(player_id, track_id) {
 
 function getRace(id) {
 	// GET request to `${SERVER}/api/races/${id}`
+	return fetch(`${SERVER}/api/races/${id}`)
+	.then(race => race.json())
+	.catch(error => console.log('Problem with getRace request:', error))
 }
 
 function startRace(id) {
@@ -352,7 +392,7 @@ function startRace(id) {
 		...defaultFetchOpts(),
 	})
 	.then(res => res.json())
-	.catch(err => console.log("Problem with getRace request::", err))
+	.catch(err => console.log("Problem with getRace request:", err))
 }
 
 function accelerate(id) {
